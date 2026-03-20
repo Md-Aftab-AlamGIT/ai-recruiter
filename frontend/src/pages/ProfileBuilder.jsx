@@ -3,6 +3,33 @@ import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import { useDebounce } from "../hooks/useDebounce";
 
+// Helper to compute progress from a profile object
+const computeProgress = (profile) => {
+  let total = 0;
+  let filled = 0;
+  if (profile.headline && profile.headline.trim() !== "") filled++;
+  total++;
+  if (profile.summary && profile.summary.trim() !== "") filled++;
+  total++;
+  if (profile.skills && profile.skills.length > 0) filled++;
+  total++;
+  if (profile.experience && profile.experience.length > 0) filled++;
+  total++;
+  if (profile.projects && profile.projects.length > 0) filled++;
+  total++;
+  if (profile.education && profile.education.length > 0) filled++;
+  total++;
+  if (profile.phone && profile.phone.trim() !== "") filled++;
+  total++;
+  if (profile.location && profile.location.trim() !== "") filled++;
+  total++;
+  if (profile.linkedin && profile.linkedin.trim() !== "") filled++;
+  total++;
+  if (profile.github && profile.github.trim() !== "") filled++;
+  total++;
+  return Math.round((filled / total) * 100);
+};
+
 const ProfileBuilder = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -17,7 +44,6 @@ const ProfileBuilder = () => {
     location: "",
     linkedin: "",
     github: "",
-    // progress removed – will compute on demand
   });
   const [savedStatus, setSavedStatus] = useState("All changes saved");
   const [aiAssistText, setAiAssistText] = useState("");
@@ -25,43 +51,8 @@ const ProfileBuilder = () => {
   const [aiField, setAiField] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Compute progress based on current profile data
-  const progress = useMemo(() => {
-    let total = 0;
-    let filled = 0;
-    if (profile.headline && profile.headline.trim() !== "") filled++;
-    total++;
-    if (profile.summary && profile.summary.trim() !== "") filled++;
-    total++;
-    if (profile.skills && profile.skills.length > 0) filled++;
-    total++;
-    if (profile.experience && profile.experience.length > 0) filled++;
-    total++;
-    if (profile.projects && profile.projects.length > 0) filled++;
-    total++;
-    if (profile.education && profile.education.length > 0) filled++;
-    total++;
-    if (profile.phone && profile.phone.trim() !== "") filled++;
-    total++;
-    if (profile.location && profile.location.trim() !== "") filled++;
-    total++;
-    if (profile.linkedin && profile.linkedin.trim() !== "") filled++;
-    total++;
-    if (profile.github && profile.github.trim() !== "") filled++;
-    total++;
-    return Math.round((filled / total) * 100);
-  }, [
-    profile.headline,
-    profile.summary,
-    profile.skills,
-    profile.experience,
-    profile.projects,
-    profile.education,
-    profile.phone,
-    profile.location,
-    profile.linkedin,
-    profile.github,
-  ]);
+  // Compute progress reactively
+  const progress = useMemo(() => computeProgress(profile), [profile]);
 
   // Fetch existing profile on mount
   useEffect(() => {
@@ -69,7 +60,7 @@ const ProfileBuilder = () => {
       try {
         const res = await api.get("/profile/me");
         if (res.data && Object.keys(res.data).length > 0) {
-          // Remove progress field from backend data (we'll compute it)
+          // Remove any stored progress field (we compute it)
           const { progress: _, ...rest } = res.data;
           setProfile(rest);
         }
@@ -82,13 +73,16 @@ const ProfileBuilder = () => {
     fetchProfile();
   }, []);
 
-  // Auto-save with debounce
+  // Auto-save with debounce – uses the debounced profile to avoid missing dependency
   const debouncedProfile = useDebounce(profile, 2000);
   useEffect(() => {
     const saveProfile = async () => {
+      if (!debouncedProfile) return;
       try {
-        // Attach computed progress before saving
-        const profileToSave = { ...profile, progress };
+        const profileToSave = {
+          ...debouncedProfile,
+          progress: computeProgress(debouncedProfile),
+        };
         await api.post("/profile", profileToSave);
         setSavedStatus("Profile saved");
       } catch (err) {
@@ -99,9 +93,9 @@ const ProfileBuilder = () => {
     if (debouncedProfile && !loading) {
       saveProfile();
     }
-  }, [debouncedProfile, loading, progress]);
+  }, [debouncedProfile, loading]); // No `profile` or `progress` dependency
 
-  // Handlers (same as before)
+  // Handlers (unchanged)
   const handleChange = (field, value) => {
     setProfile((prev) => ({ ...prev, [field]: value }));
     setSavedStatus("Saving...");
@@ -190,7 +184,7 @@ const ProfileBuilder = () => {
     }));
   };
 
-  // AI Assist functions (unchanged)
+  // AI Assist functions
   const handleAIAssist = async () => {
     if (!aiAssistText.trim()) return;
     try {
@@ -251,7 +245,7 @@ const ProfileBuilder = () => {
   const prevStep = () => setStep(step - 1);
   const handleSubmit = async () => {
     try {
-      const profileToSave = { ...profile, progress };
+      const profileToSave = { ...profile, progress: computeProgress(profile) };
       await api.post("/profile", profileToSave);
       navigate("/profile-preview");
     } catch (err) {
@@ -284,7 +278,7 @@ const ProfileBuilder = () => {
         </p>
       </div>
 
-      {/* Step indicators (same as before) */}
+      {/* Step indicators */}
       <div className="flex flex-wrap justify-between mb-8 border-b">
         {[
           "Basic",
