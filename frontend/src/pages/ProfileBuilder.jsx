@@ -89,7 +89,11 @@ const ProfileBuilder = () => {
   useEffect(() => {
     const progress = calculateProgress();
     setProfile((prev) => ({ ...prev, progress }));
+    // We only need to re-run when the fields used in calculateProgress change,
+    // not the whole profile object (to avoid infinite loop).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    calculateProgress,
     profile.headline,
     profile.summary,
     profile.skills,
@@ -100,7 +104,6 @@ const ProfileBuilder = () => {
     profile.location,
     profile.linkedin,
     profile.github,
-    calculateProgress,
   ]);
 
   // Handlers

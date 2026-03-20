@@ -24,19 +24,19 @@ const Login = () => {
     }
   };
 
-  const handleDemo = async () => {
-    setEmail("hire-me@anshumat.org");
-    setPassword("HireMe@2025!");
-    setLoading(true);
-    try {
-      const user = await login("hire-me@anshumat.org", "HireMe@2025!");
-      navigate("/onboarding");
-    } catch (err) {
-      setError(err.response?.data?.msg || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleDemo = async () => {
+  setEmail("hire-me@anshumat.org");
+  setPassword("HireMe@2025!");
+  setLoading(true);
+  try {
+    await login("hire-me@anshumat.org", "HireMe@2025!");
+    navigate("/onboarding");
+  } catch (err) {
+    setError(err.response?.data?.msg || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
