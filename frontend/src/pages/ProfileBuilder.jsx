@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import { useDebounce } from "../hooks/useDebounce";
@@ -17,7 +17,7 @@ const ProfileBuilder = () => {
     location: "",
     linkedin: "",
     github: "",
-    progress: 0,
+    // progress removed – will compute on demand
   });
   const [savedStatus, setSavedStatus] = useState("All changes saved");
   const [aiAssistText, setAiAssistText] = useState("");
@@ -25,42 +25,8 @@ const ProfileBuilder = () => {
   const [aiField, setAiField] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch existing profile on mount
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await api.get("/profile/me");
-        if (res.data && Object.keys(res.data).length > 0) {
-          setProfile(res.data);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
-
-  // Auto-save with debounce
-  const debouncedProfile = useDebounce(profile, 2000);
-  useEffect(() => {
-    const saveProfile = async () => {
-      try {
-        await api.post("/profile", profile);
-        setSavedStatus("Profile saved");
-      } catch (err) {
-        setSavedStatus("Save failed");
-        console.error(err);
-      }
-    };
-    if (debouncedProfile && !loading) {
-      saveProfile();
-    }
-  }, [debouncedProfile, loading]);
-
-  // Progress calculation (including contact fields)
-  const calculateProgress = useCallback(() => {
+  // Compute progress based on current profile data
+  const progress = useMemo(() => {
     let total = 0;
     let filled = 0;
     if (profile.headline && profile.headline.trim() !== "") filled++;
@@ -84,16 +50,7 @@ const ProfileBuilder = () => {
     if (profile.github && profile.github.trim() !== "") filled++;
     total++;
     return Math.round((filled / total) * 100);
-  }, [profile]);
-
-  useEffect(() => {
-    const progress = calculateProgress();
-    setProfile((prev) => ({ ...prev, progress }));
-    // We only need to re-run when the fields used in calculateProgress change,
-    // not the whole profile object (to avoid infinite loop).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    calculateProgress,
     profile.headline,
     profile.summary,
     profile.skills,
@@ -106,13 +63,51 @@ const ProfileBuilder = () => {
     profile.github,
   ]);
 
-  // Handlers
+  // Fetch existing profile on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await api.get("/profile/me");
+        if (res.data && Object.keys(res.data).length > 0) {
+          // Remove progress field from backend data (we'll compute it)
+          const { progress: _, ...rest } = res.data;
+          setProfile(rest);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  // Auto-save with debounce
+  const debouncedProfile = useDebounce(profile, 2000);
+  useEffect(() => {
+    const saveProfile = async () => {
+      try {
+        // Attach computed progress before saving
+        const profileToSave = { ...profile, progress };
+        await api.post("/profile", profileToSave);
+        setSavedStatus("Profile saved");
+      } catch (err) {
+        setSavedStatus("Save failed");
+        console.error(err);
+      }
+    };
+    if (debouncedProfile && !loading) {
+      saveProfile();
+    }
+  }, [debouncedProfile, loading, progress]);
+
+  // Handlers (same as before)
   const handleChange = (field, value) => {
     setProfile((prev) => ({ ...prev, [field]: value }));
     setSavedStatus("Saving...");
   };
 
-  // Experience handlers (same as before)
+  // Experience handlers
   const addExperience = () => {
     setProfile((prev) => ({
       ...prev,
@@ -256,7 +251,8 @@ const ProfileBuilder = () => {
   const prevStep = () => setStep(step - 1);
   const handleSubmit = async () => {
     try {
-      await api.post("/profile", profile);
+      const profileToSave = { ...profile, progress };
+      await api.post("/profile", profileToSave);
       navigate("/profile-preview");
     } catch (err) {
       console.error(err);
@@ -272,12 +268,12 @@ const ProfileBuilder = () => {
       <div className="mb-6 bg-white p-4 rounded-lg shadow">
         <div className="flex justify-between text-sm text-gray-600 mb-1">
           <span>Profile Completion</span>
-          <span className="font-semibold">{profile.progress}%</span>
+          <span className="font-semibold">{progress}%</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2.5">
           <div
             className="bg-blue-600 h-2.5 rounded-full transition-all duration-500"
-            style={{ width: `${profile.progress}%` }}
+            style={{ width: `${progress}%` }}
           ></div>
         </div>
         <p className="text-xs text-gray-500 mt-2 flex items-center">
@@ -288,7 +284,7 @@ const ProfileBuilder = () => {
         </p>
       </div>
 
-      {/* Step indicators */}
+      {/* Step indicators (same as before) */}
       <div className="flex flex-wrap justify-between mb-8 border-b">
         {[
           "Basic",
