@@ -4,7 +4,7 @@ const auth = require("../middleware/auth");
 const Profile = require("../models/Profile");
 
 // @route    GET api/export/resume/:userId
-router.get("/resume/:userId", auth, async (req, res) => {
+router.get("/resume/:userId", auth, async (req, res, next) => {
   try {
     const profile = await Profile.findOne({ user: req.params.userId }).populate(
       "user",
@@ -13,13 +13,12 @@ router.get("/resume/:userId", auth, async (req, res) => {
     if (!profile) return res.status(404).json({ msg: "Profile not found" });
     res.json(profile);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
+    next(err);
   }
 });
 
 // @route    GET api/export/share/:userId
-router.get("/share/:userId", async (req, res) => {
+router.get("/share/:userId", async (req, res, next) => {
   try {
     const profile = await Profile.findOne({ user: req.params.userId }).populate(
       "user",
@@ -30,8 +29,7 @@ router.get("/share/:userId", async (req, res) => {
     }
     res.json(profile);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
+    next(err);
   }
 });
 

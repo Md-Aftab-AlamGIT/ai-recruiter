@@ -5,7 +5,7 @@ const Shortlist = require("../models/Shortlist");
 const User = require("../models/User");
 
 // @route    POST api/recruiter/shortlist/:candidateId
-router.post("/shortlist/:candidateId", auth, async (req, res) => {
+router.post("/shortlist/:candidateId", auth, async (req, res, next) => {
   try {
     const recruiter = await User.findById(req.user.id);
     if (recruiter.role !== "recruiter") {
@@ -23,16 +23,15 @@ router.post("/shortlist/:candidateId", auth, async (req, res) => {
     await shortlist.save();
     res.json(shortlist);
   } catch (err) {
-    console.error(err.message);
     if (err.code === 11000) {
       return res.status(400).json({ msg: "Already shortlisted" });
     }
-    res.status(500).send("Server error");
+    next(err);
   }
 });
 
 // @route    GET api/recruiter/shortlist
-router.get("/shortlist", auth, async (req, res) => {
+router.get("/shortlist", auth, async (req, res, next) => {
   try {
     const recruiter = await User.findById(req.user.id);
     if (recruiter.role !== "recruiter") {
@@ -43,8 +42,7 @@ router.get("/shortlist", auth, async (req, res) => {
     }).populate("candidate", ["name", "email"]);
     res.json(shortlisted);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
+    next(err);
   }
 });
 

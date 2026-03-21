@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Spinner from "../components/Spinner";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -85,9 +86,9 @@ const Register = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300"
+          className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 flex justify-center items-center"
         >
-          {loading ? "Registering..." : "Register"}
+          {loading ? <Spinner /> : "Register"}
         </button>
       </form>
     </div>

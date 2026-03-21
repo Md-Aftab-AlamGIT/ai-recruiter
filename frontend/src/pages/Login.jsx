@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Spinner from "../components/Spinner";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -24,19 +25,19 @@ const Login = () => {
     }
   };
 
-const handleDemo = async () => {
-  setEmail("hire-me@anshumat.org");
-  setPassword("HireMe@2025!");
-  setLoading(true);
-  try {
-    await login("hire-me@anshumat.org", "HireMe@2025!");
-    navigate("/onboarding");
-  } catch (err) {
-    setError(err.response?.data?.msg || "Login failed");
-  } finally {
-    setLoading(false);
-  }
-};
+  const handleDemo = async () => {
+    setEmail("hire-me@anshumat.org");
+    setPassword("HireMe@2025!");
+    setLoading(true);
+    try {
+      await login("hire-me@anshumat.org", "HireMe@2025!");
+      navigate("/onboarding");
+    } catch (err) {
+      setError(err.response?.data?.msg || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
@@ -66,9 +67,9 @@ const handleDemo = async () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 mb-3"
+          className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300 mb-3 flex justify-center items-center"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? <Spinner /> : "Login"}
         </button>
       </form>
       <button

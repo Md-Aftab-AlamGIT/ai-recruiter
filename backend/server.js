@@ -21,5 +21,11 @@ app.use("/api/recruiter", require("./routes/recruiter"));
 app.use("/api/ai", require("./routes/ai"));
 app.use("/api/export", require("./routes/export"));
 
+// Global error handler middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ msg: "Server error" });
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

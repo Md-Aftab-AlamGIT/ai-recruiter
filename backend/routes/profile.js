@@ -5,8 +5,7 @@ const Profile = require("../models/Profile");
 const User = require("../models/User");
 
 // @route    GET api/profile/me
-// @desc     Get current user's profile
-router.get("/me", auth, async (req, res) => {
+router.get("/me", auth, async (req, res, next) => {
   try {
     const profile = await Profile.findOne({ user: req.user.id }).populate(
       "user",
@@ -15,14 +14,12 @@ router.get("/me", auth, async (req, res) => {
     if (!profile) return res.json({});
     res.json(profile);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
+    next(err);
   }
 });
 
 // @route    POST api/profile
-// @desc     Create or update profile
-router.post("/", auth, async (req, res) => {
+router.post("/", auth, async (req, res, next) => {
   const {
     headline,
     summary,
@@ -56,14 +53,12 @@ router.post("/", auth, async (req, res) => {
     await profile.save();
     res.json(profile);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
+    next(err);
   }
 });
 
 // @route    GET api/profile/all
-// @desc     Get all profiles (for recruiters)
-router.get("/all", auth, async (req, res) => {
+router.get("/all", auth, async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
     if (user.role !== "recruiter") {
@@ -72,14 +67,12 @@ router.get("/all", auth, async (req, res) => {
     const profiles = await Profile.find().populate("user", ["name", "email"]);
     res.json(profiles);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
+    next(err);
   }
 });
 
 // @route    GET api/profile/:userId
-// @desc     Get profile by user ID
-router.get("/:userId", auth, async (req, res) => {
+router.get("/:userId", auth, async (req, res, next) => {
   try {
     const profile = await Profile.findOne({ user: req.params.userId }).populate(
       "user",
@@ -88,8 +81,7 @@ router.get("/:userId", auth, async (req, res) => {
     if (!profile) return res.status(404).json({ msg: "Profile not found" });
     res.json(profile);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
+    next(err);
   }
 });
 

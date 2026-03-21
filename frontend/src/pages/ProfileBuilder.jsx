@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import { useDebounce } from "../hooks/useDebounce";
+import Spinner from "../components/Spinner";
 
 // Helper to compute progress from a profile object
 const computeProgress = (profile) => {
@@ -50,6 +51,17 @@ const ProfileBuilder = () => {
   const [showAiModal, setShowAiModal] = useState(false);
   const [aiField, setAiField] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false); // AI loading state
+  const [summaryLoading, setSummaryLoading] = useState(false); // summary loading
+  const [errorMessage, setErrorMessage] = useState(""); // for displaying errors
+
+  // Auto‑clear error after 5 seconds
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(""), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
 
   // Compute progress reactively
   const progress = useMemo(() => computeProgress(profile), [profile]);
@@ -66,6 +78,7 @@ const ProfileBuilder = () => {
         }
       } catch (err) {
         console.error(err);
+        setErrorMessage("Failed to load profile");
       } finally {
         setLoading(false);
       }
@@ -88,6 +101,7 @@ const ProfileBuilder = () => {
       } catch (err) {
         setSavedStatus("Save failed");
         console.error(err);
+        setErrorMessage("Failed to auto‑save profile");
       }
     };
     if (debouncedProfile && !loading) {
@@ -187,6 +201,7 @@ const ProfileBuilder = () => {
   // AI Assist functions
   const handleAIAssist = async () => {
     if (!aiAssistText.trim()) return;
+    setAiLoading(true);
     try {
       if (aiField === "experience") {
         const res = await api.post("/ai/parse-experience", {
@@ -198,8 +213,11 @@ const ProfileBuilder = () => {
             ...prev,
             experience: [...prev.experience, ...parsed],
           }));
+          setErrorMessage(""); // clear any previous error
         } else {
-          alert("Could not parse experience. Please try a different format.");
+          setErrorMessage(
+            "Could not parse experience. Please try a different format.",
+          );
         }
       } else if (aiField === "projects") {
         const newProject = {
@@ -217,16 +235,23 @@ const ProfileBuilder = () => {
       setAiAssistText("");
     } catch (err) {
       console.error(err);
-      alert("AI parsing failed");
+      setErrorMessage("AI parsing failed");
+    } finally {
+      setAiLoading(false);
     }
   };
 
   const generateSummary = async () => {
+    setSummaryLoading(true);
     try {
       const res = await api.post("/ai/generate-summary", { profile });
       setProfile((prev) => ({ ...prev, summary: res.data.summary }));
+      setErrorMessage("");
     } catch (err) {
       console.error(err);
+      setErrorMessage("Failed to generate summary");
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
@@ -250,14 +275,33 @@ const ProfileBuilder = () => {
       navigate("/profile-preview");
     } catch (err) {
       console.error(err);
-      alert("Failed to save profile");
+      setErrorMessage("Failed to save profile");
     }
   };
 
-  if (loading) return <div className="text-center p-10">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Spinner />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6">
+      {/* Error Banner */}
+      {errorMessage && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg flex justify-between items-center">
+          <span>{errorMessage}</span>
+          <button
+            onClick={() => setErrorMessage("")}
+            className="text-red-700 hover:text-red-900"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Progress bar and save status */}
       <div className="mb-6 bg-white p-4 rounded-lg shadow">
         <div className="flex justify-between text-sm text-gray-600 mb-1">
@@ -323,9 +367,10 @@ const ProfileBuilder = () => {
           />
           <button
             onClick={generateSummary}
-            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
+            disabled={summaryLoading}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition disabled:bg-purple-300 flex items-center justify-center"
           >
-            ✨ Generate with AI
+            {summaryLoading ? <Spinner /> : "✨ Generate with AI"}
           </button>
         </div>
       )}
@@ -729,9 +774,10 @@ const ProfileBuilder = () => {
               </button>
               <button
                 onClick={handleAIAssist}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+                disabled={aiLoading}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-blue-300 flex items-center"
               >
-                Parse with AI
+                {aiLoading ? <Spinner /> : "Parse with AI"}
               </button>
             </div>
           </div>
