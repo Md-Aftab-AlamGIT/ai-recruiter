@@ -13,8 +13,12 @@ const CandidateList = () => {
     const fetchCandidates = async () => {
       try {
         const res = await api.get("/profile/all");
-        setCandidates(res.data);
-        setFilteredCandidates(res.data);
+        // Filter out candidates without a valid user object
+        const validCandidates = (res.data || []).filter(
+          (c) => c.user && c.user._id,
+        );
+        setCandidates(validCandidates);
+        setFilteredCandidates(validCandidates);
       } catch (err) {
         console.error(err);
       } finally {
@@ -44,6 +48,7 @@ const CandidateList = () => {
   }, [search, skillFilter, candidates]);
 
   const handleShortlist = async (candidateId) => {
+    if (!candidateId) return;
     try {
       await api.post(`/recruiter/shortlist/${candidateId}`);
       alert("Candidate shortlisted successfully!");
@@ -94,7 +99,9 @@ const CandidateList = () => {
               key={candidate._id}
               className="border rounded-lg p-5 shadow hover:shadow-lg transition"
             >
-              <h2 className="text-xl font-semibold">{candidate.user?.name}</h2>
+              <h2 className="text-xl font-semibold">
+                {candidate.user?.name || "Unknown"}
+              </h2>
               <p className="text-gray-600 mb-3">
                 {candidate.headline || "No headline"}
               </p>
@@ -114,13 +121,13 @@ const CandidateList = () => {
 
               <div className="flex justify-between items-center">
                 <Link
-                  to={`/candidate/${candidate.user._id}`}
+                  to={`/candidate/${candidate.user?._id}`}
                   className="text-blue-600 hover:underline font-medium"
                 >
                   View Profile
                 </Link>
                 <button
-                  onClick={() => handleShortlist(candidate.user._id)}
+                  onClick={() => handleShortlist(candidate.user?._id)}
                   className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition"
                 >
                   Shortlist
