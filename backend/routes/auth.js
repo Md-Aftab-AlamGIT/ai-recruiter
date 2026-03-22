@@ -4,6 +4,10 @@ const { body, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const auth = require("../middleware/auth");
+const {
+  sendWelcomeEmail,
+  sendLoginNotification,
+} = require("../services/emailService");
 
 // @route    POST api/auth/register
 router.post(
@@ -30,6 +34,10 @@ router.post(
 
       user = new User({ email, password, name, role });
       await user.save();
+      // Send welcome email (non‑blocking)
+      sendWelcomeEmail(user.email, user.name).catch((err) =>
+        console.error("Welcome email error:", err),
+      );
 
       const payload = { user: { id: user.id, role: user.role } };
       jwt.sign(
@@ -75,6 +83,11 @@ router.post(
 
       const isMatch = await user.comparePassword(password);
       if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
+
+      // Send login notification (non‑blocking)
+      sendLoginNotification(user.email, user.name).catch((err) =>
+        console.error("Login email error:", err),
+      );
 
       const payload = { user: { id: user.id, role: user.role } };
       jwt.sign(
